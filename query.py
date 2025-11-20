@@ -17,7 +17,7 @@ def make_paraphrases(llm, q: str, n: int = 3) -> List[str]:
         "Return ONE paraphrase per line, no numbering, no extra text.\n\n"
         f"Question: {q}"
     )
-    text = llm.invoke(prompt)
+    text = llm.invoke(prompt).content
     lines = [ln.strip(" -\t") for ln in text.splitlines() if ln.strip()]
     if not lines:
         return [q]
@@ -79,7 +79,7 @@ def main():
     args = ap.parse_args()
 
     # Connect to LanceDB and prepare retrievers/LLM
-    dburi=os.getenv("S3_BUCKET_NAME")+"/lancedb"
+    dburi = f"s3://{os.getenv('S3_BUCKET_NAME')}/lancedb"
     conn = lancedb.connect(dburi)
     emb = HuggingFaceEmbeddings(model_name=args.embed_model)
     db = LanceDB(connection=conn, table_name=args.table_name, embedding=emb)
@@ -103,8 +103,17 @@ def main():
             print("No results.")
             continue
 
+        # Print retrieved sources
+        print("\n--- Retrieved Sources ---")
+        for i, doc in enumerate(docs, 1):
+            source = doc.metadata.get('source', 'unknown')
+            # Extract filename from S3 path (e.g., "Retrieval-augmented_generation.txt")
+            filename = source.split('/')[-1].replace('.txt', '').replace('_', ' ')
+            print(f"[{i}] {filename}")
+        print("-------------------------\n")
+
         prompt = build_answer_prompt(docs, q)
-        print("\n" + llm.invoke(prompt))
+        print(llm.invoke(prompt).content)
 
 if __name__ == "__main__":
     main()
