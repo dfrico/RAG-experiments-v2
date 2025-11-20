@@ -70,8 +70,6 @@ def main():
     load_dotenv()
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--lancedb-uri", default="s3://my-bucket/lancedb",
-                    help="LanceDB URI (e.g., s3://bucket/lancedb or ./lancedb)")
     ap.add_argument("--table-name", default="wiki_vectors")
     ap.add_argument("--embed-model", default="all-MiniLM-L6-v2")
     ap.add_argument("--llm-model", default="gemini-2.5-flash-lite", help="Gemini model name")
@@ -81,7 +79,8 @@ def main():
     args = ap.parse_args()
 
     # Connect to LanceDB and prepare retrievers/LLM
-    conn = lancedb.connect(args.lancedb_uri)
+    dburi=os.getenv("S3_BUCKET_NAME")+"/lancedb"
+    conn = lancedb.connect(dburi)
     emb = HuggingFaceEmbeddings(model_name=args.embed_model)
     db = LanceDB(connection=conn, table_name=args.table_name, embedding=emb)
     llm = ChatGoogleGenerativeAI(
